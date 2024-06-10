@@ -82,8 +82,20 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+html, body{
+  min-height: 100%;
+  height: auto;
+}
+
+#scroll{
+  display: flex;
+  background-color: #535bf2;
+  padding: 3em;
+}
+
 #three, #body{
   position:relative;
+  display: block;
   margin:auto;
   margin-top: 3em;
   width: 500px;
