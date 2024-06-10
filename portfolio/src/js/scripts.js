@@ -1,14 +1,24 @@
+
+
+
 import * as THREE from 'three';
- import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
  import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
  import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+ import Lenis from '@studio-freight/lenis'
 // import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // import nebula from '../../public/nabula.jpg'
 const canv = document.getElementById('three')
+
+const clock = new THREE.Clock();
+
+
+const mousePosition = new THREE.Vector2();
+
 let planePos = 2.5
 
 const BLOOM_SCENE = 1;
@@ -17,10 +27,10 @@ const bloomLayer = new THREE.Layers();
 bloomLayer.set( BLOOM_SCENE );
 
 const params = {
-    threshold: 0.3,
+    threshold: 0.4,
     strength: 0.3,
-    radius: 1,
-    exposure: 0.5
+    radius: 0.8,
+    exposure: 0.3
 };
 
 const darkMaterial = new THREE.MeshBasicMaterial( { color: 'black' } );
@@ -33,7 +43,9 @@ const materials = {};
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera( 75, canv.clientWidth/ canv.clientHeight, 0.1, 1000 );
 
-const renderer = new THREE.WebGLRenderer({antialias: true});
+const renderer = new THREE.WebGLRenderer({
+	antialias: true,
+	alpha:true});
 renderer.shadowMap.enabled = true;
  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Optional for smoother shadows
 
@@ -41,14 +53,92 @@ renderer.shadowMap.enabled = true;
 const textureLoader = new THREE.TextureLoader();
 const normalMapTexture = textureLoader.load('public/norm.jpg');
 
+// const controls = new OrbitControls( camera, renderer.domElement );
 
 
-const controls = new OrbitControls( camera, renderer.domElement );
-
-
-renderer.setPixelRatio(Math.max(1, window.devicePixelRatio / 2))
+renderer.setPixelRatio(Math.min(1, window.devicePixelRatio / 2))
 renderer.setSize(canv.clientWidth, canv.clientHeight );
+
 canv.appendChild( renderer.domElement );
+
+
+
+//LENIS------------------------------------------------------------------------
+
+let lenisObj = {}
+let loopCount = 0
+
+const lenis = new Lenis({
+duration: 1.2,
+easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // https://www.desmos.com/calculator/brs54l4xou
+direction: 'vertical', // vertical, horizontal
+gestureDirection: 'vertical', // vertical, horizontal, both
+smooth: true,
+mouseMultiplier: 1,
+smoothTouch: false,
+touchMultiplier: 2,
+infinite: false,
+})
+
+//get scroll value
+lenis.on('scroll', ({ scroll, limit, velocity, direction, progress }) => {
+console.log({ scroll, limit, velocity, direction, progress })
+lenisObj = { scroll, limit, velocity, direction, progress }
+console.log('loopCount =  '+loopCount)
+if (loopCount >= 5 || loopCount <= -5)
+	loopCount = 0
+console.log('loopCount =  '+loopCount)
+})
+
+function raf(time) {
+lenis.raf(time)
+if (loopCount < 5 && loopCount > -5){
+	moveCamera(lenisObj)
+}
+
+requestAnimationFrame(raf)
+}
+
+requestAnimationFrame(raf)
+
+//CAMERA---MOVE-----------------------------------------------------
+
+camera.position.set(0, 4, 13)
+// document.body.onscroll = moveCamera
+// window.addEventListener('scroll', moveCamera);
+
+function moveCamera(obj){
+
+
+	console.log('camera moved' )
+	console.log('lenis obj '+obj.progress)
+	// const t = document.body.getBoundingClientRect().top;
+	if (obj.direction > 0 ) {
+		loopCount += 1
+//  for (let i = 0; i > 100; i++ )
+			console.log("+")
+	camera.position.y += 0.1;
+			camera.position.x += 0.1;
+		
+	}
+		
+if (obj.direction < 0 )  {
+	loopCount -= 1
+	console.log('-')
+	// for (let i = 0; i > 100; i++ )
+		camera.position.y -= 0.1;
+		camera.position.x -= 0.1;
+	
+	}
+
+}
+			
+
+
+
+	
+	// camera.position.y = 3.5;
+	// camera.position.x = 1;
 
 
 //BLOOM----------------------------------------------------------------------------------
@@ -246,8 +336,12 @@ const renderScene = new RenderPass( scene, camera );
 // scene.add( light );
 
 
-const light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.5 );
+// const light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.2 );
+// scene.add( light );
+//--------------HEMI LIGHT
+const light = new THREE.AmbientLight( 0xffffbb, 0.2 );
 scene.add( light );
+//--------------AMBIENT LIGHT
 
 
 // const directionLight = new THREE.DirectionalLight( 0xffffff, 2)
@@ -270,13 +364,13 @@ scene.fog = new THREE.FogExp2(0x049ef4, 0.05);
 // const dLightHelper = new THREE.DirectionalLightHelper(directionLight)
 // scene.add( dLightHelper)
 
-const spotLight = new THREE.SpotLight(0xFFFFFF);
-scene.add( spotLight );
-spotLight.position.set(0,8,0);
+const spotLight = new THREE.PointLight(0xFFFFFF);
+
+spotLight.position.set(4,8,0);
 spotLight.castShadow = true;
-spotLight.distance = 150
-spotLight.intensity = 50
-spotLight.power = 50
+spotLight.distance = 50
+spotLight.intensity = 10
+spotLight.power = 10
 spotLight.decay = 1
 
 
@@ -285,9 +379,29 @@ spotLight.shadow.mapSize.width = 512; // default
 spotLight.shadow.mapSize.height = 512; // default
 spotLight.shadow.camera.near = 0.5; // default
 spotLight.shadow.camera.far = 500; // default
+scene.add( spotLight );
+const sLightHelper = new THREE.PointLightHelper(spotLight);
+scene.add(sLightHelper)
 
-// const sLightHelper = new THREE.SpotLightHelper(spotLight);
-// scene.add(sLightHelper)
+const spotLight2 = new THREE.PointLight(0xe48aa7);
+
+spotLight2.position.set(-2,10,-6);
+spotLight2.castShadow = true;
+spotLight2.distance = 150
+spotLight2.intensity = 50
+spotLight2.power = 50
+spotLight2.decay = 1
+
+
+//Set up shadow properties for the light
+spotLight2.shadow.mapSize.width = 512; // default
+spotLight2.shadow.mapSize.height = 512; // default
+spotLight2.shadow.camera.near = 0.5; // default
+spotLight2.shadow.camera.far = 500; // default
+scene.add( spotLight2 );
+
+const sLightHelper2 = new THREE.PointLightHelper(spotLight2);
+scene.add(sLightHelper2)
 
 
 // const dLightShadowHelper = new THREE.CameraHelper(directionLight.shadow.camera);
@@ -370,7 +484,7 @@ bgPlane.position.y = 0.1;
 bgPlane.position.z = -5;
 scene.add(bgPlane)
 
-//-------------------------------------
+//-------------------------------------  LOGIC
 
 // const sphere2Geometry = new THREE.SphereGeometry(4);
 
@@ -395,10 +509,7 @@ scene.add(bgPlane)
 // sphere2.position.set(-5, 10, 10);
 
 
-const clock = new THREE.Clock();
 
-
-const mousePosition = new THREE.Vector2();
 
 window,addEventListener('mousemove', function(e) {
     mousePosition.x = (e.clientX /  canv.clientWidth) * 2 - 1;
@@ -407,10 +518,10 @@ window,addEventListener('mousemove', function(e) {
 });
 
 
-const rayCaster = new THREE.Raycaster();
+// const rayCaster = new THREE.Raycaster();
 
-const cubeId = cube.id;
-cube.name = 'cub'
+// const cubeId = cube.id;
+// cube.name = 'cub'
 
 const count = plane.geometry.attributes.position.count
 
@@ -466,16 +577,16 @@ function animate(){
     scene.add( cube );
 
 
-    rayCaster.setFromCamera(mousePosition, camera);
-    const intersects = rayCaster.intersectObjects(scene.children);
+    // rayCaster.setFromCamera(mousePosition, camera);
+    // const intersects = rayCaster.intersectObjects(scene.children);
 
-    for (let i = 0 ; i < intersects.length; i++){
-        if(intersects[i].object.id === cubeId){
-            intersects[i].object.material.color.set(0xFF0000)
-            // console.log(intersects)
-            intersects[i].rotation.x += 0.001
-        }
-    };
+    // for (let i = 0 ; i < intersects.length; i++){
+    //     if(intersects[i].object.id === cubeId){
+    //         intersects[i].object.material.color.set(0xFF0000)
+    //         // console.log(intersects)
+    //         intersects[i].rotation.x += 0.001
+    //     }
+    // };
 
   
 if (elapsedTime % 2 !== 0){
@@ -501,8 +612,8 @@ plane.layers.toggle( BLOOM_SCENE )
 // const gridHelper = new THREE.GridHelper(50);
 // scene.add( gridHelper )
 
-camera.position.set(0, 4, 13)
-controls.update()
+// camera.position.set(0, 4, 13)
+// controls.update()
 
 
 renderer.setAnimationLoop(animate)
@@ -512,5 +623,3 @@ window.addEventListener('resize', function() {
     camera.updateProjectionMatrix();
     renderer.setSize( canv.clientWidth,  canv.clientHeight);
 });
-
-
