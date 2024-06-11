@@ -1,6 +1,3 @@
-
-
-
 import * as THREE from 'three';
 // import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
@@ -10,16 +7,19 @@ import * as THREE from 'three';
  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
  import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
  import Lenis from '@studio-freight/lenis'
+ import { Water } from 'three/addons/objects/Water.js';
+ import { Sky } from 'three/addons/objects/Sky.js';
 // import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // import nebula from '../../public/nabula.jpg'
+import lake from '../../public/foggy-lake.jpg'
 const canv = document.getElementById('three')
 
 const clock = new THREE.Clock();
-
-
 const mousePosition = new THREE.Vector2();
 
+let sun, water
 let planePos = 2.5
+let waveCount = 0
 
 const BLOOM_SCENE = 1;
 
@@ -27,10 +27,10 @@ const bloomLayer = new THREE.Layers();
 bloomLayer.set( BLOOM_SCENE );
 
 const params = {
-    threshold: 0.4,
-    strength: 0.3,
+    threshold: 0.2,
+    strength: 0.5,
     radius: 0.8,
-    exposure: 0.3
+    exposure: 0.6
 };
 
 const darkMaterial = new THREE.MeshBasicMaterial( { color: 'black' } );
@@ -56,7 +56,7 @@ const normalMapTexture = textureLoader.load('public/norm.jpg');
 // const controls = new OrbitControls( camera, renderer.domElement );
 
 
-renderer.setPixelRatio(Math.min(1, window.devicePixelRatio / 2))
+renderer.setPixelRatio(Math.max(1, window.devicePixelRatio / 2)) //----zmienić na max<--<--<-
 renderer.setSize(canv.clientWidth, canv.clientHeight );
 
 canv.appendChild( renderer.domElement );
@@ -67,6 +67,8 @@ canv.appendChild( renderer.domElement );
 
 let lenisObj = {}
 let loopCount = 0
+// const top = document.getElementById('top')
+// const bottom = document.getElementById('bottom')
 
 const lenis = new Lenis({
 duration: 1.2,
@@ -83,19 +85,39 @@ infinite: false,
 //get scroll value
 lenis.on('scroll', ({ scroll, limit, velocity, direction, progress }) => {
 console.log({ scroll, limit, velocity, direction, progress })
+console.log('cam z '+camera.position.z+' loopCount '+loopCount)
 lenisObj = { scroll, limit, velocity, direction, progress }
-console.log('loopCount =  '+loopCount)
-if (loopCount >= 5 || loopCount <= -5)
-	loopCount = 0
-console.log('loopCount =  '+loopCount)
+if (direction === -1 && loopCount < -24){
+	cameraReset()
+}
+
+if (progress > 0.6 && direction > 0){
+secondStop()
+}
 })
+
+function firstStop(){
+	
+	if (loopCount >= 25 || loopCount <= -25)
+		loopCount = 0
+	console.log('loopCount =  '+loopCount)
+}
+
+function secondStop(){
+	console.log('2 stop')
+}
+
 
 function raf(time) {
 lenis.raf(time)
-if (loopCount < 5 && loopCount > -5){
+cameraWaving()
+if (loopCount < 25 && loopCount > -25 ){
 	moveCamera(lenisObj)
 }
-
+if (camera.position.z < 10.6 && lenis.direction < 0){
+	console.log('camera z '+ camera.position.z)
+firstStop()
+}
 requestAnimationFrame(raf)
 }
 
@@ -104,37 +126,78 @@ requestAnimationFrame(raf)
 //CAMERA---MOVE-----------------------------------------------------
 
 camera.position.set(0, 4, 13)
+camera.lookAt(0,2,0)
+
+function cameraReset(){
+	console.log('camera reseted')
+	camera.position.set(0, 4, 13)
+	camera.lookAt(0,2,0)
+	loopCount = 0
+}
 // document.body.onscroll = moveCamera
 // window.addEventListener('scroll', moveCamera);
 
 function moveCamera(obj){
+        // const x = camera.position.x;
+        // const y =  camera.position.y;
+        // const xsin = (Math.sin(x + now) / 8 )
+        // const ycos = (Math.cos(y + now) / 16)
 
-
-	console.log('camera moved' )
-	console.log('lenis obj '+obj.progress)
 	// const t = document.body.getBoundingClientRect().top;
 	if (obj.direction > 0 ) {
 		loopCount += 1
 //  for (let i = 0; i > 100; i++ )
 			console.log("+")
-	camera.position.y += 0.1;
-			camera.position.x += 0.1;
-		
+			camera.position.y += 0.01 ;
+			camera.position.x += 0.02 ;
+			camera.position.z += -0.1;
+			camera.lookAt(0,2,0)
 	}
 		
-if (obj.direction < 0 )  {
+if (obj.direction < 0 && camera.position.z < 13)  {
 	loopCount -= 1
 	console.log('-')
 	// for (let i = 0; i > 100; i++ )
-		camera.position.y -= 0.1;
-		camera.position.x -= 0.1;
-	
+		camera.position.y -= 0.01 ;
+		camera.position.x -= 0.02 ;
+		camera.position.z -= -0.1;
+		camera.lookAt(0,2,0)
 	}
 
 }
 			
 
+//CAMERA WAVING----------------------------------------------------------
+let waveDirection = true
+function cameraWaving(){
 
+	if (waveCount === 100){
+		if (waveDirection){
+			waveCount = 200
+			waveDirection = !waveDirection
+		} else {
+			waveCount = 0
+			waveDirection = !waveDirection
+		}
+	}
+
+	if (waveCount < 100){
+		console.log('up')
+		bgPlane.position.y -= 0.005;
+		camera.position.y += 0.01;
+		camera.position.x += 0.002;
+		camera.position.z += -0.0001;
+		waveCount++
+	} else {
+		console.log('down')
+		bgPlane.position.y += 0.005;
+		camera.position.y -= 0.01;
+		camera.position.x -= 0.002;
+		camera.position.z -= -0.0001;
+		waveCount--
+	}
+
+}
 
 	
 	// camera.position.y = 3.5;
@@ -325,7 +388,89 @@ const renderScene = new RenderPass( scene, camera );
 
 			}
 
-//BLOOM -----------------------------------------------------------------------------------
+			//BLOOM -----------------------------------------------------------------------------------
+
+
+
+
+sun = new THREE.Vector3();
+
+// Water
+
+const waterGeometry = new THREE.PlaneGeometry( 100, 100 );
+
+water = new Water(
+	waterGeometry,
+	{
+		textureWidth: 512,
+		textureHeight: 512,
+		waterNormals: new THREE.TextureLoader().load( 'public/norm.jpg', function ( texture ) {
+
+			texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+		} ),
+		sunDirection: new THREE.Vector3(),
+		sunColor: 0xb2a8ad,
+		waterColor: 0x8694CD,
+		distortionScale: 1.7,
+		fog: scene.fog !== undefined,
+		size: 0.1
+	}
+);
+
+water.rotation.x = - Math.PI / 2;
+// water.scale.x = 20;
+// water.scale.y = 20;
+
+scene.add( water );
+
+// Skybox
+
+const sky = new Sky();
+sky.scale.setScalar( 10000 );
+scene.add( sky );
+
+const skyUniforms = sky.material.uniforms;
+
+skyUniforms[ 'turbidity' ].value = 10;
+skyUniforms[ 'rayleigh' ].value = 5;
+skyUniforms[ 'mieCoefficient' ].value = 0.005;
+skyUniforms[ 'mieDirectionalG' ].value = 0.8;
+
+const parameters = {
+	elevation: 2.2,
+	azimuth: 190
+};
+
+const pmremGenerator = new THREE.PMREMGenerator( renderer );
+const sceneEnv = new THREE.Scene();
+
+let renderTarget;
+
+function updateSun() {
+
+	const phi = THREE.MathUtils.degToRad( 94 - parameters.elevation );
+	const theta = THREE.MathUtils.degToRad( parameters.azimuth );
+
+	sun.setFromSphericalCoords( 1, phi, theta );
+
+	sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
+	water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+
+	if ( renderTarget !== undefined ) renderTarget.dispose();
+
+	sceneEnv.add( sky );
+	renderTarget = pmremGenerator.fromScene( sceneEnv );
+	scene.add( sky );
+
+	scene.environment = renderTarget.texture;
+
+}
+
+updateSun();
+
+
+//WATER AND SKY KURWA ----------------------------------------------------------------
 
 
 // const axesHelper = new THREE.AxesHelper(5);
@@ -339,8 +484,8 @@ const renderScene = new RenderPass( scene, camera );
 // const light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.2 );
 // scene.add( light );
 //--------------HEMI LIGHT
-const light = new THREE.AmbientLight( 0xffffbb, 0.2 );
-scene.add( light );
+// const light = new THREE.AmbientLight( 0xb2a8ad, 0.3 );
+// scene.add( light );
 //--------------AMBIENT LIGHT
 
 
@@ -358,9 +503,12 @@ scene.add( light );
 // directionLight.shadow.camera.bottom = -5;
 
 
-
+//049ef4  ffffbb
 // scene.fog = new THREE.Fog(0xFFFFFF, 20, 50);
-scene.fog = new THREE.FogExp2(0x049ef4, 0.05);
+
+ //scene.fog = new THREE.FogExp2(0x8DB0BD, 0.05);
+
+
 // const dLightHelper = new THREE.DirectionalLightHelper(directionLight)
 // scene.add( dLightHelper)
 
@@ -406,6 +554,8 @@ scene.add(sLightHelper2)
 
 // const dLightShadowHelper = new THREE.CameraHelper(directionLight.shadow.camera);
 // scene.add( dLightShadowHelper );
+
+//--------------GEOMETRY----------------------------------
 
 const geometry = new THREE.BoxGeometry( 2, 2, 2 );
 const material = new THREE.MeshStandardMaterial( { color: 0x00ff00,
@@ -464,7 +614,7 @@ plane.reciveShadow = true;
 // plane.geometry.attributes.position.array[lastPointZ] = 1;
 
 
-scene.add( plane );
+ //scene.add( plane );
 
 //------------- background plane
 const bgPlaneGeometry = new THREE.PlaneGeometry(40,10)
@@ -478,11 +628,12 @@ const bgPlaneMaterial = new THREE.MeshStandardMaterial({
 });
 const bgPlane = new THREE.Mesh(bgPlaneGeometry, bgPlaneMaterial);
 
-bgPlane.rotation.x = -0.45 * Math.PI;
+	bgPlane.rotation.x = -0.45 * Math.PI;
+	bgPlane.position.y = 0.1;
+	bgPlane.position.z = -5;
 
-bgPlane.position.y = 0.1;
-bgPlane.position.z = -5;
-scene.add(bgPlane)
+ //scene.add(bgPlane)
+
 
 //-------------------------------------  LOGIC
 
@@ -537,6 +688,9 @@ const now = Date.now() / 1500
     }
     plane.geometry.computeVertexNormals()
     plane.geometry.attributes.position.needsUpdate = true;
+
+
+
     // let plusOrMinus = Math.random() < 0.5 ? -1 : 1;
     // let vertArr = []
     // vertArr = plane.geometry.attributes.position.array
@@ -599,15 +753,20 @@ render()
 
 
 cube.layers.toggle( BLOOM_SCENE )
-plane.layers.toggle( BLOOM_SCENE )
+//plane.layers.toggle( BLOOM_SCENE )
 
 // const cubeTextureLoader = new THREE.CubeTextureLoader();
 // scene.background = cubeTextureLoader.load([nebula, nebula, nebula, nebula, nebula, nebula]);
 
 
+// const TextureLoader = new THREE.TextureLoader()
+// const lakeTexture = TextureLoader.load(lake);
 
-// scene.background = textureLoader.load(nebula)
+// scene.background = lakeTexture;
+// scene.backgroundIntensity = 0.2
 
+
+// renderer.setClearColor(0x1035CA)
  //renderer.setClearAlpha(0x000000)
 // const gridHelper = new THREE.GridHelper(50);
 // scene.add( gridHelper )
@@ -623,3 +782,5 @@ window.addEventListener('resize', function() {
     camera.updateProjectionMatrix();
     renderer.setSize( canv.clientWidth,  canv.clientHeight);
 });
+
+
