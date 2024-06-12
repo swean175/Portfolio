@@ -11,7 +11,7 @@ import * as THREE from 'three';
  import { Sky } from 'three/addons/objects/Sky.js';
 // import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // import nebula from '../../public/nabula.jpg'
-import lake from '../../public/foggy-lake.jpg'
+// import lake from '../../public/foggy-lake.jpg'
 const canv = document.getElementById('three')
 
 const clock = new THREE.Clock();
@@ -61,11 +61,12 @@ renderer.setSize(canv.clientWidth, canv.clientHeight );
 
 canv.appendChild( renderer.domElement );
 
+camera.position.set(0.3, 4, 13)
+camera.lookAt(0,2,0)
 
 
 //LENIS------------------------------------------------------------------------
 
-let lenisObj = {}
 let loopCount = 0
 // const top = document.getElementById('top')
 // const bottom = document.getElementById('bottom')
@@ -86,81 +87,122 @@ infinite: false,
 lenis.on('scroll', ({ scroll, limit, velocity, direction, progress }) => {
 console.log({ scroll, limit, velocity, direction, progress })
 console.log('cam z '+camera.position.z+' loopCount '+loopCount)
-lenisObj = { scroll, limit, velocity, direction, progress }
-if (direction === -1 && loopCount < -24){
-	cameraReset()
-}
-
-if (progress > 0.6 && direction > 0){
-secondStop()
-}
 })
-
-function firstStop(){
-	
-	if (loopCount >= 25 || loopCount <= -25)
-		loopCount = 0
-	console.log('loopCount =  '+loopCount)
-}
-
-function secondStop(){
-	console.log('2 stop')
-}
 
 
 function raf(time) {
 lenis.raf(time)
 cameraWaving()
-if (loopCount < 25 && loopCount > -25 ){
-	moveCamera(lenisObj)
-}
-if (camera.position.z < 10.6 && lenis.direction < 0){
-	console.log('camera z '+ camera.position.z)
-firstStop()
-}
 requestAnimationFrame(raf)
 }
 
 requestAnimationFrame(raf)
 
-//CAMERA---MOVE-----------------------------------------------------
+//CAMERA---MOVE----TRACK-----RESET--------------------------------------------
 
-camera.position.set(0, 4, 13)
-camera.lookAt(0,2,0)
 
-function cameraReset(){
+const animRate = 600
+
+
+
+function cameraTrack(){
+	firstStop()
+	secondStop()
+	rotateCube()
+	driver()
+}
+
+function cameraReset({x, y, z}){
 	console.log('camera reseted')
-	camera.position.set(0, 4, 13)
+	camera.position.set(x, y, z)
 	camera.lookAt(0,2,0)
 	loopCount = 0
+	lenis.direction = undefined
 }
+
+function driver(){
+	const firstDist = {x:0.1, y:4, z:13}
+	const secDist = {x:-0.1, y:4.1, z:10.5}
+	const thrDist = {x:-0.3, y:4.2, z:8}
+
+	if (lenis.scroll === 0 && loopCount === -animRate){
+		cameraReset(firstDist)
+	}
+
+	if (loopCount === animRate && camera.position.z < 13 && camera.position.z >= 10.5){
+		cameraReset(secDist)
+	}
+
+	if (loopCount === animRate && camera.position.z < 10.5 && camera.position.z >= 8){
+		cameraReset(thrDist)
+	}
+
+// 	if (camera.position.z < 10.6 && lenis.direction < 0 && loopCount === animRate){
+// 	loopCount = 0
+// 	console.log('camera z '+ camera.position.z + ' loppcount '+loopCount)
+// }
+
+}
+
+function firstStop(){
+	
+	if (loopCount < animRate && loopCount > -animRate ){
+		if (camera.position.z > 10.5 || lenis.direction < 0 && camera.position.z <= 13){
+			moveCamera()
+		}
+		
+	}
+}
+
+function secondStop(){
+
+	if (lenis.progress > 0.12 && camera.position.z <= 10.5 && loopCount < animRate && loopCount > -animRate){
+		if (cube.rotation.y !== 0 && camera.position.z === 8 && lenis.direction < 0 || lenis.direction > 0 && camera.position.z > 8){
+			console.log('2 stop')
+		moveCamera()
+		}	
+	}
+}
+
+function rotateCube(){
+
+if ( lenis.__isScrolling && camera.position.z === 8 && lenis.direction > 0){
+console.log('cube rotaton y '+ cube.rotation.y )
+cube.rotation.y = lenis.scroll / 200 + lenis.velocity
+}
+}
+
+
+
+
+
 // document.body.onscroll = moveCamera
 // window.addEventListener('scroll', moveCamera);
 
-function moveCamera(obj){
+function moveCamera(){
         // const x = camera.position.x;
         // const y =  camera.position.y;
         // const xsin = (Math.sin(x + now) / 8 )
         // const ycos = (Math.cos(y + now) / 16)
 
 	// const t = document.body.getBoundingClientRect().top;
-	if (obj.direction > 0 ) {
+	if (lenis.direction > 0) {
 		loopCount += 1
 //  for (let i = 0; i > 100; i++ )
-			console.log("+")
-			camera.position.y += 0.01 ;
-			camera.position.x += 0.02 ;
-			camera.position.z += -0.1;
+			// console.log("+")
+			camera.position.y += 0.00015 ;
+			camera.position.x += 0.0003 ;
+			camera.position.z += -0.00416;
 			camera.lookAt(0,2,0)
 	}
 		
-if (obj.direction < 0 && camera.position.z < 13)  {
+if (lenis.direction < 0 )  {
 	loopCount -= 1
-	console.log('-')
+	// console.log('-')
 	// for (let i = 0; i > 100; i++ )
-		camera.position.y -= 0.01 ;
-		camera.position.x -= 0.02 ;
-		camera.position.z -= -0.1;
+		camera.position.y -= 0.00015 ;
+		camera.position.x -= 0.0003 ;
+		camera.position.z -= -0.00416;
 		camera.lookAt(0,2,0)
 	}
 
@@ -182,18 +224,18 @@ function cameraWaving(){
 	}
 
 	if (waveCount < 100){
-		console.log('up')
+		// console.log('up')
 		bgPlane.position.y -= 0.005;
 		camera.position.y += 0.01;
 		camera.position.x += 0.002;
-		camera.position.z += -0.0001;
+		// camera.position.z += -0.0001;
 		waveCount++
 	} else {
-		console.log('down')
+		// console.log('down')
 		bgPlane.position.y += 0.005;
 		camera.position.y -= 0.01;
 		camera.position.x -= 0.002;
-		camera.position.z -= -0.0001;
+		// camera.position.z -= -0.0001;
 		waveCount--
 	}
 
@@ -746,7 +788,7 @@ function animate(){
 if (elapsedTime % 2 !== 0){
     wavy()
 }
-
+cameraTrack()
 render()
     // renderer.render(scene, camera)
 }
@@ -782,5 +824,7 @@ window.addEventListener('resize', function() {
     camera.updateProjectionMatrix();
     renderer.setSize( canv.clientWidth,  canv.clientHeight);
 });
+
+
 
 
