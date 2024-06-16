@@ -92,7 +92,7 @@ console.log('cam z '+camera.position.z+' loopCount '+loopCount)
 
 function raf(time) {
 lenis.raf(time)
-cameraWaving()
+
 requestAnimationFrame(raf)
 }
 
@@ -102,7 +102,9 @@ requestAnimationFrame(raf)
 
 
 const animRate = 600
-
+const firstDist = {x:0.1, y:4, z:13}
+const secDist = {x:-0.1, y:4.1, z:10.5}
+const thrDist = {x:-0.3, y:4.2, z:8}
 
 
 function cameraTrack(){
@@ -118,22 +120,21 @@ function cameraReset({x, y, z}){
 	camera.lookAt(0,2,0)
 	loopCount = 0
 	lenis.direction = undefined
+	cube.rotation.y = 0
 }
 
 function driver(){
-	const firstDist = {x:0.1, y:4, z:13}
-	const secDist = {x:-0.1, y:4.1, z:10.5}
-	const thrDist = {x:-0.3, y:4.2, z:8}
 
-	if (lenis.scroll === 0 && loopCount === -animRate){
+
+	if (lenis.scroll === 0 && loopCount === -animRate ||lenis.scroll === 0 && lenis.velocity < -10){
 		cameraReset(firstDist)
 	}
 
-	if (loopCount === animRate && camera.position.z < 13 && camera.position.z >= 10.5){
+	if (loopCount === animRate && camera.position.z < 13 && camera.position.z >= 10.5  ||lenis.scroll > 0 && camera.position.z >= 10.5 && lenis.velocity < -10){
 		cameraReset(secDist)
 	}
 
-	if (loopCount === animRate && camera.position.z < 10.5 && camera.position.z >= 8){
+	if (loopCount === animRate && camera.position.z < 10.5 && camera.position.z >= 8 || lenis.velocity < -10 && cube.rotation.y > 0){
 		cameraReset(thrDist)
 	}
 
@@ -146,7 +147,7 @@ function driver(){
 
 function firstStop(){
 	
-	if (loopCount < animRate && loopCount > -animRate ){
+	if (loopCount < animRate && loopCount > -animRate && lenis.scroll <= 100){
 		if (camera.position.z > 10.5 || lenis.direction < 0 && camera.position.z <= 13){
 			moveCamera()
 		}
@@ -156,8 +157,8 @@ function firstStop(){
 
 function secondStop(){
 
-	if (lenis.progress > 0.12 && camera.position.z <= 10.5 && loopCount < animRate && loopCount > -animRate){
-		if (cube.rotation.y !== 0 && camera.position.z === 8 && lenis.direction < 0 || lenis.direction > 0 && camera.position.z > 8){
+	if ( camera.position.z <= 10.5 && loopCount < animRate && loopCount > -animRate && lenis.scroll > 100 ){
+		if ((cube.rotation.y === 0 && camera.position.z === 8 && lenis.direction < 0) || (lenis.direction > 0 && camera.position.z > 8)){
 			console.log('2 stop')
 		moveCamera()
 		}	
@@ -165,11 +166,20 @@ function secondStop(){
 }
 
 function rotateCube(){
-
-if ( lenis.__isScrolling && camera.position.z === 8 && lenis.direction > 0){
+	let oneDeg = 347/360
+if ( lenis.__isScrolling && camera.position.z === 8 && lenis.scroll > 200){
+	if ( lenis.direction > 0 && (cube.rotation.y / 90) <= 4){
 console.log('cube rotaton y '+ cube.rotation.y )
-cube.rotation.y = lenis.scroll / 200 + lenis.velocity
+let oneRot = Math.round((parseFloat(oneDeg,2)*100))/100
+console.log(oneRot)
+Math.round((parseFloat(cube.rotation.y ,2)*100))/100 <= 90 ? cube.rotation.y = (Math.round((parseFloat(cube.rotation.y ,2)*100))/100) + oneRot/25: null
 }
+if (lenis.direction < 0){
+	cameraReset(thrDist)
+
+}
+}
+
 }
 
 
@@ -212,10 +222,11 @@ if (lenis.direction < 0 )  {
 //CAMERA WAVING----------------------------------------------------------
 let waveDirection = true
 function cameraWaving(){
+	
 
-	if (waveCount === 100){
+	if (waveCount === 3000){
 		if (waveDirection){
-			waveCount = 200
+			waveCount = 6000
 			waveDirection = !waveDirection
 		} else {
 			waveCount = 0
@@ -223,18 +234,18 @@ function cameraWaving(){
 		}
 	}
 
-	if (waveCount < 100){
+	if (waveCount < 3000){
 		// console.log('up')
-		bgPlane.position.y -= 0.005;
-		camera.position.y += 0.01;
-		camera.position.x += 0.002;
+		bgPlane.position.y -= 0.0005;
+		camera.position.y += 0.0001;
+		camera.position.x += 0.00002;
 		// camera.position.z += -0.0001;
 		waveCount++
 	} else {
 		// console.log('down')
-		bgPlane.position.y += 0.005;
-		camera.position.y -= 0.01;
-		camera.position.x -= 0.002;
+		bgPlane.position.y += 0.0005;
+		camera.position.y -= 0.0001;
+		camera.position.x -= 0.00002;
 		// camera.position.z -= -0.0001;
 		waveCount--
 	}
@@ -569,9 +580,9 @@ spotLight.shadow.mapSize.width = 512; // default
 spotLight.shadow.mapSize.height = 512; // default
 spotLight.shadow.camera.near = 0.5; // default
 spotLight.shadow.camera.far = 500; // default
-scene.add( spotLight );
-const sLightHelper = new THREE.PointLightHelper(spotLight);
-scene.add(sLightHelper)
+// scene.add( spotLight );
+// const sLightHelper = new THREE.PointLightHelper(spotLight);
+// scene.add(sLightHelper)
 
 const spotLight2 = new THREE.PointLight(0xe48aa7);
 
@@ -588,10 +599,10 @@ spotLight2.shadow.mapSize.width = 512; // default
 spotLight2.shadow.mapSize.height = 512; // default
 spotLight2.shadow.camera.near = 0.5; // default
 spotLight2.shadow.camera.far = 500; // default
-scene.add( spotLight2 );
+// scene.add( spotLight2 );
 
-const sLightHelper2 = new THREE.PointLightHelper(spotLight2);
-scene.add(sLightHelper2)
+// const sLightHelper2 = new THREE.PointLightHelper(spotLight2);
+// scene.add(sLightHelper2)
 
 
 // const dLightShadowHelper = new THREE.CameraHelper(directionLight.shadow.camera);
@@ -768,7 +779,7 @@ function animate(){
     planeMaterial.normalMap.offset.x = elapsedTime * 0.01;
     planeMaterial.normalMap.offset.y = elapsedTime * 0.005;
 
-   
+	cameraTrack()
 
     scene.add( cube );
 
@@ -787,8 +798,9 @@ function animate(){
   
 if (elapsedTime % 2 !== 0){
     wavy()
+	cameraWaving()
 }
-cameraTrack()
+
 render()
     // renderer.render(scene, camera)
 }
