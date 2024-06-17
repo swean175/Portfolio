@@ -86,7 +86,7 @@ infinite: false,
 //get scroll value
 lenis.on('scroll', ({ scroll, limit, velocity, direction, progress }) => {
 console.log({ scroll, limit, velocity, direction, progress })
-console.log('cam z '+camera.position.z+' loopCount '+loopCount)
+console.log('cam z '+camera.position.z+' loopCount '+loopCount+' actual Scroll = '+lenis.actualScroll+' is scrolling = '+lenis.isScrolling+' is locked = '+lenis.isLocked)
 })
 
 
@@ -100,42 +100,59 @@ requestAnimationFrame(raf)
 
 //CAMERA---MOVE----TRACK-----RESET--------------------------------------------
 
-
+let onMove = false
+let currentStep = 'first'
 const animRate = 600
 const firstDist = {x:0.1, y:4, z:13}
 const secDist = {x:-0.1, y:4.1, z:10.5}
 const thrDist = {x:-0.3, y:4.2, z:8}
 
-
 function cameraTrack(){
+	driver()
 	firstStop()
 	secondStop()
 	rotateCube()
-	driver()
 }
 
 function cameraReset({x, y, z}){
-	console.log('camera reseted')
+	console.log('camera reseted ' + z)
 	camera.position.set(x, y, z)
 	camera.lookAt(0,2,0)
 	loopCount = 0
-	lenis.direction = undefined
 	cube.rotation.y = 0
+	if (lenis.scroll === 0 || z < 13 && z > 10.5){
+		onMove = false
+	}
+	if(z <= 10.51 &&  z >= 8.1){
+		onMove = true
+	}
+	if(z === 8 ){
+		onMove = !onMove
+	}
+	console.log('onMove = '+onMove)
 }
 
 function driver(){
 
 
-	if (lenis.scroll === 0 && loopCount === -animRate ||lenis.scroll === 0 && lenis.velocity < -10){
+	if ((lenis.scroll === 0 && loopCount === -animRate) || (lenis.scroll === 0 && lenis.velocity < -50)){
+		console.log('drive 1')
 		cameraReset(firstDist)
+		lenis.direction = undefined
+		currentStep = 'first'
 	}
 
-	if (loopCount === animRate && camera.position.z < 13 && camera.position.z >= 10.5  ||lenis.scroll > 0 && camera.position.z >= 10.5 && lenis.velocity < -10){
+	if ((loopCount === animRate && camera.position.z < 13 && camera.position.z >= 10.5)  || (lenis.scroll > 0 && camera.position.z >= 10.5 && lenis.velocity < -10)){
+		console.log('drive 2')
 		cameraReset(secDist)
+		onMove = true
+		currentStep = 'second'
 	}
 
-	if (loopCount === animRate && camera.position.z < 10.5 && camera.position.z >= 8 || lenis.velocity < -10 && cube.rotation.y > 0){
+	if ((loopCount === animRate && camera.position.z < 10.5 && camera.position.z >= 8 && onMove) || (lenis.velocity < -50 && cube.rotation.y > 0)){
+		console.log('drive 3 + cam z = '+  camera.position.z)
 		cameraReset(thrDist)
+		currentStep = 'cube'
 	}
 
 // 	if (camera.position.z < 10.6 && lenis.direction < 0 && loopCount === animRate){
@@ -147,9 +164,11 @@ function driver(){
 
 function firstStop(){
 	
-	if (loopCount < animRate && loopCount > -animRate && lenis.scroll <= 100){
-		if (camera.position.z > 10.5 || lenis.direction < 0 && camera.position.z <= 13){
+	if ( loopCount < animRate && loopCount > -animRate && lenis.scroll >= 0 ){
+		if (camera.position.z > 10.5 || (camera.position.z === 10.5 && lenis.direction < 0 )|| (lenis.direction < 0 && camera.position.z <= 13 && camera.position.z === 10.5)){
+			console.log('first stop')
 			moveCamera()
+		
 		}
 		
 	}
@@ -157,29 +176,30 @@ function firstStop(){
 
 function secondStop(){
 
-	if ( camera.position.z <= 10.5 && loopCount < animRate && loopCount > -animRate && lenis.scroll > 100 ){
-		if ((cube.rotation.y === 0 && camera.position.z === 8 && lenis.direction < 0) || (lenis.direction > 0 && camera.position.z > 8)){
+	if (camera.position.z <= 10.5 && loopCount < animRate && loopCount > -animRate && onMove && currentStep === 'second' || currentStep === 'cube'){
+		if ((cube.rotation.y === 0 && camera.position.z >= 8 && lenis.direction < 0) || (lenis.direction > 0 && camera.position.z > 8)){
 			console.log('2 stop')
 		moveCamera()
+		
 		}	
 	}
 }
 
 function rotateCube(){
 	let oneDeg = 347/360
-if ( lenis.__isScrolling && camera.position.z === 8 && lenis.scroll > 200){
+if ( camera.position.z === 8 && onMove === false && currentStep === 'cube'){
+	console.log('cube rotation')
+		if (lenis.direction < 0){
+			cameraReset(thrDist)
+			console.log('cube ended')
+		}
 	if ( lenis.direction > 0 && (cube.rotation.y / 90) <= 4){
-console.log('cube rotaton y '+ cube.rotation.y )
+	console.log(' y '+ cube.rotation.y )
 let oneRot = Math.round((parseFloat(oneDeg,2)*100))/100
 console.log(oneRot)
 Math.round((parseFloat(cube.rotation.y ,2)*100))/100 <= 90 ? cube.rotation.y = (Math.round((parseFloat(cube.rotation.y ,2)*100))/100) + oneRot/25: null
-}
-if (lenis.direction < 0){
-	cameraReset(thrDist)
-
-}
-}
-
+	}
+  }
 }
 
 
@@ -196,23 +216,23 @@ function moveCamera(){
         // const ycos = (Math.cos(y + now) / 16)
 
 	// const t = document.body.getBoundingClientRect().top;
-	if (lenis.direction > 0) {
+	if (lenis.direction > 0 && camera.position.z > 8) {
 		loopCount += 1
 //  for (let i = 0; i > 100; i++ )
 			// console.log("+")
 			camera.position.y += 0.00015 ;
 			camera.position.x += 0.0003 ;
-			camera.position.z += -0.00416;
+			camera.position.z -= 0.00416;
 			camera.lookAt(0,2,0)
 	}
 		
-if (lenis.direction < 0 )  {
+if (lenis.direction < 0 && camera.position.z < 13)  {
 	loopCount -= 1
 	// console.log('-')
 	// for (let i = 0; i > 100; i++ )
 		camera.position.y -= 0.00015 ;
 		camera.position.x -= 0.0003 ;
-		camera.position.z -= -0.00416;
+		camera.position.z += 0.00416;
 		camera.lookAt(0,2,0)
 	}
 
@@ -779,8 +799,16 @@ function animate(){
     planeMaterial.normalMap.offset.x = elapsedTime * 0.01;
     planeMaterial.normalMap.offset.y = elapsedTime * 0.005;
 
-	cameraTrack()
+	// if (lenis.__isScrolling){
+	// 	console.log('cameraTrack')
+	// 	cameraTrack()
 
+	// }
+
+	
+	cameraTrack()
+	
+	
     scene.add( cube );
 
 
@@ -799,6 +827,7 @@ function animate(){
 if (elapsedTime % 2 !== 0){
     wavy()
 	cameraWaving()
+
 }
 
 render()
@@ -827,6 +856,7 @@ cube.layers.toggle( BLOOM_SCENE )
 
 // camera.position.set(0, 4, 13)
 // controls.update()
+
 
 
 renderer.setAnimationLoop(animate)
