@@ -1,10 +1,5 @@
-
-
-
-
-
 import * as THREE from 'three';
-// import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -33,11 +28,17 @@ const bloomLayer = new THREE.Layers();
 bloomLayer.set( BLOOM_SCENE );
 
 const params = {
-    threshold: 0.2,
-    strength: 0.5,
-    radius: 0.8,
+    threshold: 0.14,
+    strength: 0.67,
+    radius: 0.58,
     exposure: 0.6
 };
+
+
+// threshold: 0.2,
+// strength: 0.5,
+// radius: 0.8,
+// exposure: 0.6
 
 const darkMaterial = new THREE.MeshBasicMaterial( { color: 'black' } );
 const materials = {};
@@ -59,7 +60,7 @@ renderer.shadowMap.enabled = true;
 const textureLoader = new THREE.TextureLoader();
 const normalMapTexture = textureLoader.load('public/norm.jpg');
 
-// const controls = new OrbitControls( camera, renderer.domElement );
+ const controls = new OrbitControls( camera, renderer.domElement );
 
 
 renderer.setPixelRatio(Math.max(1, window.devicePixelRatio / 2)) //----zmienić na max<--<--<-
@@ -111,8 +112,8 @@ let totalSteps = 0
 let currentStep = 'first'
 const animRate = 600 
 const firstDist = {x:0.1, y:4, z:13}
-const secDist = {x:-0.1, y:4.1, z:10.5}
-const thrDist = {x:-0.3, y:4.2, z:8}
+const secDist = {x:camera.position.x, y:camera.position.y, z:10.5}  //  {x:-0.1, y:4.1, z:10.5}
+const thrDist = {x:camera.position.x, y:camera.position.y, z:8}  //  {x:-0.3, y:4.2, z:8} 
 
 function cameraTrack(){
 
@@ -144,10 +145,8 @@ function cameraTrack(){
 	firstStop()
 	secondStop()
 	rotateCube()
-
 	
 }
-
 
 
 function cameraReset({x, y, z}){
@@ -228,6 +227,7 @@ const moveDist = 2.5/animRate
 			camera.position.z -= moveDist;
 			camera.lookAt(0,2,0)
 			totalSteps += 1
+			moveAway(-moveDist)
 	}
 		
 if (lenis.direction < 0 && camera.position.z < 13)  {
@@ -239,6 +239,7 @@ if (lenis.direction < 0 && camera.position.z < 13)  {
 		camera.position.z += moveDist;
 		camera.lookAt(0,2,0)
 		totalSteps -= 1
+		moveAway(moveDist)
 	}
 
 
@@ -476,7 +477,7 @@ sun = new THREE.Vector3();
 
 // Water
 
-const waterGeometry = new THREE.PlaneGeometry( 100, 100 );
+const waterGeometry = new THREE.PlaneGeometry( 50, 50 );
 
 water = new Water(
 	waterGeometry,
@@ -507,7 +508,7 @@ scene.add( water );
 // Skybox
 
 // const sky = new Sky();
-// sky.scale.setScalar( 10000 );
+// sky.scale.setScalar( 100 );
 // scene.add( sky );
 
 // const skyUniforms = sky.material.uniforms;
@@ -552,6 +553,24 @@ scene.add( water );
 
 //WATER AND SKY KURWA ----------------------------------------------------------------
 
+const backTexture = new THREE.TextureLoader().load('./public/foggy-lake.jpg');
+const backGeometry = new THREE.PlaneGeometry(16, 16);
+const backMaterial = new THREE.MeshBasicMaterial({ map: backTexture });
+const backPlane = new THREE.Mesh(backGeometry, backMaterial);
+
+backPlane.position.set(-1.5,17,-25)
+	backPlane.scale.set(5,4)
+scene.add(backPlane);
+
+
+	function moveAway(z){
+		const move = backPlane.position.z + (z.toFixed(3) * 1.6) 
+		console.log('moved = '+ move)
+		backPlane.position.set(-1.5,17,move)
+	}
+
+//----------------------------BACKGROUND---------TEXTURE-------------------------------
+
 
 // const axesHelper = new THREE.AxesHelper(5);
 // scene.add(axesHelper);
@@ -586,7 +605,7 @@ scene.add( water );
 //049ef4  ffffbb
 // scene.fog = new THREE.Fog(0xFFFFFF, 20, 50);
 
- scene.fog = new THREE.FogExp2(0x6D8993, 0.05);
+ scene.fog = new THREE.FogExp2(0x6E6B73, 0.04);
 
 
 // const dLightHelper = new THREE.DirectionalLightHelper(directionLight)
@@ -595,7 +614,7 @@ scene.add( water );
 const pointLight = new THREE.PointLight(0xB6C2D9);
 
 pointLight.position.set(0,1,8);
-pointLight.castShadow = true; //------------ prawe
+pointLight.castShadow = true; //------------ midle
 pointLight.distance = 7
 pointLight.power = 30
 pointLight.decay = 0.4
@@ -607,27 +626,28 @@ pointLight.shadow.mapSize.height = 512; // default
 pointLight.shadow.camera.near = 0.5; // default
 pointLight.shadow.camera.far = 500; // default
 scene.add( pointLight );
- const pLightHelper = new THREE.PointLightHelper(pointLight);
- scene.add(pLightHelper)
+// const pLightHelper = new THREE.PointLightHelper(pointLight);
+ //scene.add(pLightHelper)
 
-const pointLight2 = new THREE.PointLight(0x326BDC);
+const pointLight2 = new THREE.DirectionalLight(0x4B1873, 10); //-------------------- left
 
-pointLight2.position.set(-6,7,3);
+pointLight2.position.set(-6,7,-3);
 pointLight2.castShadow = true;
-pointLight2.distance = 30  //-------------------- lewe
-pointLight2.power = 100
-pointLight2.decay = 0.1
+// pointLight2.distance = 50  
+// pointLight2.power = 10000
+// pointLight2.intensity = 30
+// pointLight2.decay = 0
 
 
 //Set up shadow properties for the light
-pointLight2.shadow.mapSize.width = 512; // default
-pointLight2.shadow.mapSize.height = 512; // default
-pointLight2.shadow.camera.near = 0.5; // default
-pointLight2.shadow.camera.far = 500; // default
+// pointLight2.shadow.mapSize.width = 512; // default
+// pointLight2.shadow.mapSize.height = 512; // default
+// pointLight2.shadow.camera.near = 0.5; // default
+// pointLight2.shadow.camera.far = 500; // default
 scene.add( pointLight2 );
 
-const pLightHelper2 = new THREE.PointLightHelper(pointLight2);
- scene.add(pLightHelper2)
+//const pLightHelper2 = new THREE.PointLightHelper(pointLight2);
+// scene.add(pLightHelper2)
 
 
 //const dLightShadowHelper = new THREE.CameraHelper(directionLight.shadow.camera);
@@ -666,8 +686,8 @@ const planeMaterial = new THREE.MeshStandardMaterial({
     normalScale: new THREE.Vector2(0.1, 0.1) 
 });
 
-// planeMaterial.normalMap.wrapS = THREE.MirroredRepeatWrapping; // Repeat on the x-axis (horizontal)
-// planeMaterial.normalMap.wrapT = THREE.MirroredRepeatWrapping;
+planeMaterial.normalMap.wrapS = THREE.MirroredRepeatWrapping; // Repeat on the x-axis (horizontal)
+planeMaterial.normalMap.wrapT = THREE.MirroredRepeatWrapping;
 
 const planeGeometry = new THREE.PlaneGeometry(20, 20, 10, 10);
 // const groundMaterial = new THREE.MeshStandardMaterial(
@@ -685,11 +705,11 @@ plane.reciveShadow = true;
 
 
 
-// plane.geometry.attributes.position.array[0] = 1;
-// plane.geometry.attributes.position.array[1] =1;
-// plane.geometry.attributes.position.array[2] = 1;
-//const lastPointZ = plane.geometry.attributes.position.array.length - 1;
-// plane.geometry.attributes.position.array[lastPointZ] = 1;
+plane.geometry.attributes.position.array[0] = 1;
+plane.geometry.attributes.position.array[1] =1;
+plane.geometry.attributes.position.array[2] = 1;
+const lastPointZ = plane.geometry.attributes.position.array.length - 1;
+plane.geometry.attributes.position.array[lastPointZ] = 1;
 
 
  //scene.add( plane );
@@ -880,7 +900,7 @@ cube.layers.toggle( BLOOM_SCENE )
 // scene.add( gridHelper )
 
 // camera.position.set(0, 4, 13)
-// controls.update()
+ controls.update()
 
 
 
