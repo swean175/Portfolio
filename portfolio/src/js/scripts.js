@@ -1,3 +1,8 @@
+
+
+
+
+
 import * as THREE from 'three';
 // import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
@@ -20,6 +25,7 @@ const mousePosition = new THREE.Vector2();
 let sun, water
 let planePos = 2.5
 let waveCount = 0
+let scrollCount = 0
 
 const BLOOM_SCENE = 1;
 
@@ -99,117 +105,114 @@ requestAnimationFrame(raf)
 requestAnimationFrame(raf)
 
 //CAMERA---MOVE----TRACK-----RESET--------------------------------------------
-
-let onMove = false
+let startRot = 0
+let animIsActive = false
+let totalSteps = 0
 let currentStep = 'first'
-const animRate = 600
+const animRate = 600 
 const firstDist = {x:0.1, y:4, z:13}
 const secDist = {x:-0.1, y:4.1, z:10.5}
 const thrDist = {x:-0.3, y:4.2, z:8}
 
 function cameraTrack(){
-	driver()
+
+
+	if ((lenis.scroll === 0 && loopCount === -animRate) || (lenis.scroll === 0 && lenis.velocity < -50)){
+		console.log('drive 1 - totalSteps = ' + totalSteps)
+		cameraReset(firstDist)
+		lenis.direction = undefined
+		currentStep = 'first'
+		totalSteps = 0
+		animIsActive = false
+		scrollCount = 0
+	}
+
+	if ((totalSteps === animRate && camera.position.z <= 10.5 && camera.position.z >= 8)  || ((lenis.scroll < 0 && camera.position.z < 10.5 ) && currentStep === 'cube')){
+		console.log('drive 2 - totalSteps = ' + totalSteps)
+		cameraReset(secDist)
+		currentStep = 'second'
+	}
+
+	if ((totalSteps === 1200 && currentStep === 'second' ) || (lenis.velocity < -50 && cube.rotation.y > 0)){
+		console.log('drive 3 + cam z = '+  camera.position.z + ' totalSteps = ' + totalSteps)
+		cameraReset(thrDist)
+		currentStep = 'cube'
+		startRot = 0
+		cube.rotation.y = 0
+	}
+
 	firstStop()
 	secondStop()
 	rotateCube()
+
+	
 }
 
+
+
 function cameraReset({x, y, z}){
+	animIsActive = false
 	console.log('camera reseted ' + z)
 	camera.position.set(x, y, z)
 	camera.lookAt(0,2,0)
 	loopCount = 0
 	cube.rotation.y = 0
-	if (lenis.scroll === 0 || z < 13 && z > 10.5){
-		onMove = false
-	}
-	if(z <= 10.51 &&  z >= 8.1){
-		onMove = true
-	}
-	if(z === 8 ){
-		onMove = !onMove
-	}
-	console.log('onMove = '+onMove)
-}
-
-function driver(){
-
-
-	if ((lenis.scroll === 0 && loopCount === -animRate) || (lenis.scroll === 0 && lenis.velocity < -50)){
-		console.log('drive 1')
-		cameraReset(firstDist)
-		lenis.direction = undefined
-		currentStep = 'first'
-	}
-
-	if ((loopCount === animRate && camera.position.z < 13 && camera.position.z >= 10.5)  || (lenis.scroll > 0 && camera.position.z >= 10.5 && lenis.velocity < -10)){
-		console.log('drive 2')
-		cameraReset(secDist)
-		onMove = true
-		currentStep = 'second'
-	}
-
-	if ((loopCount === animRate && camera.position.z < 10.5 && camera.position.z >= 8 && onMove) || (lenis.velocity < -50 && cube.rotation.y > 0)){
-		console.log('drive 3 + cam z = '+  camera.position.z)
-		cameraReset(thrDist)
-		currentStep = 'cube'
-	}
-
-// 	if (camera.position.z < 10.6 && lenis.direction < 0 && loopCount === animRate){
-// 	loopCount = 0
-// 	console.log('camera z '+ camera.position.z + ' loppcount '+loopCount)
-// }
 
 }
+
+
 
 function firstStop(){
 	
-	if ( loopCount < animRate && loopCount > -animRate && lenis.scroll >= 0 ){
-		if (camera.position.z > 10.5 || (camera.position.z === 10.5 && lenis.direction < 0 )|| (lenis.direction < 0 && camera.position.z <= 13 && camera.position.z === 10.5)){
-			console.log('first stop')
+	if ( loopCount < animRate && loopCount > -animRate && lenis.scroll >= 0 && (currentStep === 'second' || currentStep === 'first')){
+		if (camera.position.z > 10.5 || (camera.position.z === 10.5 && lenis.direction < 0 )){
+			console.log('first stop - totalSteps = '+ totalSteps)
 			moveCamera()
-		
+
+			if (camera.position.z < 10.51 && lenis.direction > 0){
+				cameraReset(secDist)
+				currentStep = 'second'
+			}
 		}
-		
 	}
 }
+
 
 function secondStop(){
 
-	if (camera.position.z <= 10.5 && loopCount < animRate && loopCount > -animRate && onMove && currentStep === 'second' || currentStep === 'cube'){
+	if ( camera.position.z <= 10.5 && loopCount <= animRate && loopCount >= -animRate && (currentStep === 'second' || currentStep === 'cube')){
 		if ((cube.rotation.y === 0 && camera.position.z >= 8 && lenis.direction < 0) || (lenis.direction > 0 && camera.position.z > 8)){
-			console.log('2 stop')
-		moveCamera()
-		
-		}	
-	}
-}
-
-function rotateCube(){
-	let oneDeg = 347/360
-if ( camera.position.z === 8 && onMove === false && currentStep === 'cube'){
-	console.log('cube rotation')
-		if (lenis.direction < 0){
-			cameraReset(thrDist)
-			console.log('cube ended')
-		}
-	if ( lenis.direction > 0 && (cube.rotation.y / 90) <= 4){
-	console.log(' y '+ cube.rotation.y )
-let oneRot = Math.round((parseFloat(oneDeg,2)*100))/100
-console.log(oneRot)
-Math.round((parseFloat(cube.rotation.y ,2)*100))/100 <= 90 ? cube.rotation.y = (Math.round((parseFloat(cube.rotation.y ,2)*100))/100) + oneRot/25: null
-	}
+				console.log('2 stop - totalSteps = '+ totalSteps)
+				moveCamera()
+	}	
   }
 }
 
 
-
+function rotateCube(){
+	const fullRot = THREE.MathUtils.degToRad(360)
+	const oneRot = THREE.MathUtils.degToRad(90)
+if ( camera.position.z === 8 && currentStep === 'cube' && animIsActive){
+	console.log('cube rotation')
+		if (lenis.direction < 0 || cube.rotation.y > fullRot){
+			cameraReset(thrDist)
+			console.log('cube ended')
+		}
+	if ( lenis.direction > 0 && ( cube.rotation.y / oneRot) <= 4){
+	console.log('startRot = '+startRot + ' y '+ cube.rotation.y + ' fullRot = '+ fullRot)
+	cube.rotation.y <= (startRot + oneRot) ? cube.rotation.y += THREE.MathUtils.degToRad(0.1 + lenis.velocity): animIsActive = false
+	} else {
+		animIsActive = false
+	}
+  }
+}
 
 
 // document.body.onscroll = moveCamera
 // window.addEventListener('scroll', moveCamera);
 
 function moveCamera(){
+const moveDist = 2.5/animRate 
         // const x = camera.position.x;
         // const y =  camera.position.y;
         // const xsin = (Math.sin(x + now) / 8 )
@@ -222,8 +225,9 @@ function moveCamera(){
 			// console.log("+")
 			camera.position.y += 0.00015 ;
 			camera.position.x += 0.0003 ;
-			camera.position.z -= 0.00416;
+			camera.position.z -= moveDist;
 			camera.lookAt(0,2,0)
+			totalSteps += 1
 	}
 		
 if (lenis.direction < 0 && camera.position.z < 13)  {
@@ -232,9 +236,11 @@ if (lenis.direction < 0 && camera.position.z < 13)  {
 	// for (let i = 0; i > 100; i++ )
 		camera.position.y -= 0.00015 ;
 		camera.position.x -= 0.0003 ;
-		camera.position.z += 0.00416;
+		camera.position.z += moveDist;
 		camera.lookAt(0,2,0)
+		totalSteps -= 1
 	}
+
 
 }
 			
@@ -475,19 +481,19 @@ const waterGeometry = new THREE.PlaneGeometry( 100, 100 );
 water = new Water(
 	waterGeometry,
 	{
-		textureWidth: 512,
-		textureHeight: 512,
+		textureWidth: 1024,
+		textureHeight: 1024,
 		waterNormals: new THREE.TextureLoader().load( 'public/norm.jpg', function ( texture ) {
 
 			texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
 		} ),
 		sunDirection: new THREE.Vector3(),
-		sunColor: 0xb2a8ad,
+		sunColor: 0x4F1E71,
 		waterColor: 0x8694CD,
-		distortionScale: 1.7,
+		distortionScale: 0.7,
 		fog: scene.fog !== undefined,
-		size: 0.1
+		size: 0.5
 	}
 );
 
@@ -495,52 +501,53 @@ water.rotation.x = - Math.PI / 2;
 // water.scale.x = 20;
 // water.scale.y = 20;
 
+water.receiveShadow = true
 scene.add( water );
 
 // Skybox
 
-const sky = new Sky();
-sky.scale.setScalar( 10000 );
-scene.add( sky );
+// const sky = new Sky();
+// sky.scale.setScalar( 10000 );
+// scene.add( sky );
 
-const skyUniforms = sky.material.uniforms;
+// const skyUniforms = sky.material.uniforms;
 
-skyUniforms[ 'turbidity' ].value = 10;
-skyUniforms[ 'rayleigh' ].value = 5;
-skyUniforms[ 'mieCoefficient' ].value = 0.005;
-skyUniforms[ 'mieDirectionalG' ].value = 0.8;
+// skyUniforms[ 'turbidity' ].value = 10;
+// skyUniforms[ 'rayleigh' ].value = 5;
+// skyUniforms[ 'mieCoefficient' ].value = 0.005;
+// skyUniforms[ 'mieDirectionalG' ].value = 0.8;
 
-const parameters = {
-	elevation: 2.2,
-	azimuth: 190
-};
+// const parameters = {
+// 	elevation: 2.2,
+// 	azimuth: 190
+// };
 
-const pmremGenerator = new THREE.PMREMGenerator( renderer );
-const sceneEnv = new THREE.Scene();
+// const pmremGenerator = new THREE.PMREMGenerator( renderer );
+// const sceneEnv = new THREE.Scene();
 
-let renderTarget;
+// let renderTarget;
 
-function updateSun() {
+// function updateSun() {
 
-	const phi = THREE.MathUtils.degToRad( 94 - parameters.elevation );
-	const theta = THREE.MathUtils.degToRad( parameters.azimuth );
+// 	const phi = THREE.MathUtils.degToRad( 94 - parameters.elevation );
+// 	const theta = THREE.MathUtils.degToRad( parameters.azimuth );
 
-	sun.setFromSphericalCoords( 1, phi, theta );
+// 	sun.setFromSphericalCoords( 1, phi, theta );
 
-	sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
-	water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
+// 	sky.material.uniforms[ 'sunPosition' ].value.copy( sun );
+// 	water.material.uniforms[ 'sunDirection' ].value.copy( sun ).normalize();
 
-	if ( renderTarget !== undefined ) renderTarget.dispose();
+// 	if ( renderTarget !== undefined ) renderTarget.dispose();
 
-	sceneEnv.add( sky );
-	renderTarget = pmremGenerator.fromScene( sceneEnv );
-	scene.add( sky );
+// 	sceneEnv.add( sky );
+// 	renderTarget = pmremGenerator.fromScene( sceneEnv );
+// 	scene.add( sky );
 
-	scene.environment = renderTarget.texture;
+// 	scene.environment = renderTarget.texture;
 
-}
+// }
 
-updateSun();
+// updateSun();
 
 
 //WATER AND SKY KURWA ----------------------------------------------------------------
@@ -550,7 +557,7 @@ updateSun();
 // scene.add(axesHelper);
 
 
-// const light = new THREE.AmbientLight( 0x404040, 10 ); // soft white light
+// const light = new THREE.AmbientLight( 0x4F1E71, 50 ); // soft purple light
 // scene.add( light );
 
 
@@ -562,7 +569,7 @@ updateSun();
 //--------------AMBIENT LIGHT
 
 
-// const directionLight = new THREE.DirectionalLight( 0xffffff, 2)
+// const directionLight = new THREE.DirectionalLight( 0xffffff, 1)
 // directionLight.castShadow = true;
 // scene.add( directionLight )
 // directionLight.position.set(4,7,4)
@@ -579,58 +586,56 @@ updateSun();
 //049ef4  ffffbb
 // scene.fog = new THREE.Fog(0xFFFFFF, 20, 50);
 
- //scene.fog = new THREE.FogExp2(0x8DB0BD, 0.05);
+ scene.fog = new THREE.FogExp2(0x6D8993, 0.05);
 
 
 // const dLightHelper = new THREE.DirectionalLightHelper(directionLight)
 // scene.add( dLightHelper)
 
-const spotLight = new THREE.PointLight(0xFFFFFF);
+const pointLight = new THREE.PointLight(0xB6C2D9);
 
-spotLight.position.set(4,8,0);
-spotLight.castShadow = true;
-spotLight.distance = 50
-spotLight.intensity = 10
-spotLight.power = 10
-spotLight.decay = 1
-
-
-//Set up shadow properties for the light
-spotLight.shadow.mapSize.width = 512; // default
-spotLight.shadow.mapSize.height = 512; // default
-spotLight.shadow.camera.near = 0.5; // default
-spotLight.shadow.camera.far = 500; // default
-// scene.add( spotLight );
-// const sLightHelper = new THREE.PointLightHelper(spotLight);
-// scene.add(sLightHelper)
-
-const spotLight2 = new THREE.PointLight(0xe48aa7);
-
-spotLight2.position.set(-2,10,-6);
-spotLight2.castShadow = true;
-spotLight2.distance = 150
-spotLight2.intensity = 50
-spotLight2.power = 50
-spotLight2.decay = 1
+pointLight.position.set(0,1,8);
+pointLight.castShadow = true; //------------ prawe
+pointLight.distance = 7
+pointLight.power = 30
+pointLight.decay = 0.4
 
 
 //Set up shadow properties for the light
-spotLight2.shadow.mapSize.width = 512; // default
-spotLight2.shadow.mapSize.height = 512; // default
-spotLight2.shadow.camera.near = 0.5; // default
-spotLight2.shadow.camera.far = 500; // default
-// scene.add( spotLight2 );
+pointLight.shadow.mapSize.width = 512; // default
+pointLight.shadow.mapSize.height = 512; // default
+pointLight.shadow.camera.near = 0.5; // default
+pointLight.shadow.camera.far = 500; // default
+scene.add( pointLight );
+ const pLightHelper = new THREE.PointLightHelper(pointLight);
+ scene.add(pLightHelper)
 
-// const sLightHelper2 = new THREE.PointLightHelper(spotLight2);
-// scene.add(sLightHelper2)
+const pointLight2 = new THREE.PointLight(0x326BDC);
+
+pointLight2.position.set(-6,7,3);
+pointLight2.castShadow = true;
+pointLight2.distance = 30  //-------------------- lewe
+pointLight2.power = 100
+pointLight2.decay = 0.1
 
 
-// const dLightShadowHelper = new THREE.CameraHelper(directionLight.shadow.camera);
-// scene.add( dLightShadowHelper );
+//Set up shadow properties for the light
+pointLight2.shadow.mapSize.width = 512; // default
+pointLight2.shadow.mapSize.height = 512; // default
+pointLight2.shadow.camera.near = 0.5; // default
+pointLight2.shadow.camera.far = 500; // default
+scene.add( pointLight2 );
+
+const pLightHelper2 = new THREE.PointLightHelper(pointLight2);
+ scene.add(pLightHelper2)
+
+
+//const dLightShadowHelper = new THREE.CameraHelper(directionLight.shadow.camera);
+ //scene.add( dLightShadowHelper );
 
 //--------------GEOMETRY----------------------------------
 
-const geometry = new THREE.BoxGeometry( 2, 2, 2 );
+const geometry = new THREE.BoxGeometry( 4, 4, 4 );
 const material = new THREE.MeshStandardMaterial( { color: 0x00ff00,
     wireframe: false
  } );
@@ -805,8 +810,14 @@ function animate(){
 
 	// }
 
+	// if((lenis.progress > 0.1 && lenis.progress < 0.3) && (scrollCount > 0 && scrollCount < 4)){
+	// 	animIsActive = false
+	// } 
+
+	if (animIsActive){
+		cameraTrack()
+	}
 	
-	cameraTrack()
 	
 	
     scene.add( cube );
@@ -826,7 +837,7 @@ function animate(){
   
 if (elapsedTime % 2 !== 0){
     wavy()
-	cameraWaving()
+	 cameraWaving()
 
 }
 
@@ -834,6 +845,20 @@ render()
     // renderer.render(scene, camera)
 }
 
+
+
+
+window.addEventListener('scroll', () => {
+	startRot = cube.rotation.y
+	animIsActive = true
+	if (lenis.direction > 0){
+		scrollCount += 1
+	} else if (lenis.direction < 0){
+		scrollCount -= 1
+	}
+	
+	console.log('scrollCount = '+ scrollCount)
+})
 
 cube.layers.toggle( BLOOM_SCENE )
 //plane.layers.toggle( BLOOM_SCENE )
@@ -866,7 +891,3 @@ window.addEventListener('resize', function() {
     camera.updateProjectionMatrix();
     renderer.setSize( canv.clientWidth,  canv.clientHeight);
 });
-
-
-
-
