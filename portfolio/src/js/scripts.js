@@ -1,3 +1,4 @@
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
@@ -92,8 +93,8 @@ infinite: false,
 
 //get scroll value
 lenis.on('scroll', ({ scroll, limit, velocity, direction, progress }) => {
-console.log({ scroll, limit, velocity, direction, progress })
-console.log('cam z '+camera.position.z+' loopCount '+loopCount+' actual Scroll = '+lenis.actualScroll+' is scrolling = '+lenis.isScrolling+' is locked = '+lenis.isLocked)
+//console.log({ scroll, limit, velocity, direction, progress })
+//console.log('cam z '+camera.position.z+' loopCount '+loopCount+' actual Scroll = '+lenis.actualScroll+' is scrolling = '+lenis.isScrolling+' is locked = '+lenis.isLocked)
 })
 
 
@@ -107,16 +108,19 @@ requestAnimationFrame(raf)
 
 //CAMERA---MOVE----TRACK-----RESET--------------------------------------------
 let startRot = 0
+let countRot = 0
 let animIsActive = false
 let totalSteps = 0
 let currentStep = 'first'
-const animRate = 600 
+let camWaveOn = true
+const animRate = 2000 
 const firstDist = {x:0.1, y:4, z:13}
-const secDist = {x:camera.position.x, y:camera.position.y, z:10.5}  //  {x:-0.1, y:4.1, z:10.5}
-const thrDist = {x:camera.position.x, y:camera.position.y, z:8}  //  {x:-0.3, y:4.2, z:8} 
+const secDist = {x:0.3, y:4.2, z:10.5}  //  {x:-0.1, y:4.1, z:10.5}
+const thrDist = {x:0.5, y:4.4, z:8}  //  {x:-0.3, y:4.2, z:8} 
 
 function cameraTrack(){
 
+ //requestAnimationFrame(cameraTrack)
 
 	if ((lenis.scroll === 0 && loopCount === -animRate) || (lenis.scroll === 0 && lenis.velocity < -50)){
 		console.log('drive 1 - totalSteps = ' + totalSteps)
@@ -134,7 +138,7 @@ function cameraTrack(){
 		currentStep = 'second'
 	}
 
-	if ((totalSteps === 1200 && currentStep === 'second' ) || (lenis.velocity < -50 && cube.rotation.y > 0)){
+	if ((totalSteps === 4000 && currentStep === 'second' ) || (lenis.velocity < -50 && cube.rotation.y > 0)){
 		console.log('drive 3 + cam z = '+  camera.position.z + ' totalSteps = ' + totalSteps)
 		cameraReset(thrDist)
 		currentStep = 'cube'
@@ -153,7 +157,7 @@ function cameraReset({x, y, z}){
 	animIsActive = false
 	console.log('camera reseted ' + z)
 	camera.position.set(x, y, z)
-	camera.lookAt(0,2,0)
+	// camera.lookAt(0,2,0)
 	loopCount = 0
 	cube.rotation.y = 0
 
@@ -165,7 +169,7 @@ function firstStop(){
 	
 	if ( loopCount < animRate && loopCount > -animRate && lenis.scroll >= 0 && (currentStep === 'second' || currentStep === 'first')){
 		if (camera.position.z > 10.5 || (camera.position.z === 10.5 && lenis.direction < 0 )){
-			console.log('first stop - totalSteps = '+ totalSteps)
+			//console.log('first stop - totalSteps = '+ totalSteps)
 			moveCamera()
 
 			if (camera.position.z < 10.51 && lenis.direction > 0){
@@ -181,7 +185,7 @@ function secondStop(){
 
 	if ( camera.position.z <= 10.5 && loopCount <= animRate && loopCount >= -animRate && (currentStep === 'second' || currentStep === 'cube')){
 		if ((cube.rotation.y === 0 && camera.position.z >= 8 && lenis.direction < 0) || (lenis.direction > 0 && camera.position.z > 8)){
-				console.log('2 stop - totalSteps = '+ totalSteps)
+				//console.log('2 stop - totalSteps = '+ totalSteps)
 				moveCamera()
 	}	
   }
@@ -193,15 +197,16 @@ function rotateCube(){
 	const oneRot = THREE.MathUtils.degToRad(90)
 if ( camera.position.z === 8 && currentStep === 'cube' && animIsActive){
 	console.log('cube rotation')
-		if (lenis.direction < 0 || cube.rotation.y > fullRot){
+		if (lenis.direction < 0 || cube.rotation.y >= fullRot ){
 			cameraReset(thrDist)
 			console.log('cube ended')
 		}
 	if ( lenis.direction > 0 && ( cube.rotation.y / oneRot) <= 4){
-	console.log('startRot = '+startRot + ' y '+ cube.rotation.y + ' fullRot = '+ fullRot)
-	cube.rotation.y <= (startRot + oneRot) ? cube.rotation.y += THREE.MathUtils.degToRad(0.1 + lenis.velocity): animIsActive = false
+	//console.log('startRot = '+startRot.toFixed(4) + ' y '+ cube.rotation.y + ' fullRot = '+ fullRot + ' oneRot = '+oneRot.toFixed(4))
+	cube.rotation.y.toFixed(4) <= (startRot + oneRot).toFixed(4) ? cube.rotation.y += THREE.MathUtils.degToRad(0.08): animIsActive = false
 	} else {
 		animIsActive = false
+		console.log('full rotation reached')
 	}
   }
 }
@@ -211,6 +216,7 @@ if ( camera.position.z === 8 && currentStep === 'cube' && animIsActive){
 // window.addEventListener('scroll', moveCamera);
 
 function moveCamera(){
+	//requestAnimationFrame(moveCamera)
 const moveDist = 2.5/animRate 
         // const x = camera.position.x;
         // const y =  camera.position.y;
@@ -249,11 +255,14 @@ if (lenis.direction < 0 && camera.position.z < 13)  {
 //CAMERA WAVING----------------------------------------------------------
 let waveDirection = true
 function cameraWaving(){
-	
 
-	if (waveCount === 3000){
+	camera.lookAt(0,2,0)
+	
+if (camWaveOn){
+
+	if (waveCount === 300){
 		if (waveDirection){
-			waveCount = 6000
+			waveCount = 600
 			waveDirection = !waveDirection
 		} else {
 			waveCount = 0
@@ -261,21 +270,25 @@ function cameraWaving(){
 		}
 	}
 
-	if (waveCount < 3000){
+	if (waveCount < 300){
 		// console.log('up')
-		bgPlane.position.y -= 0.0005;
-		camera.position.y += 0.0001;
-		camera.position.x += 0.00002;
+		bgPlane.position.y -= 0.00005;
+		camera.position.y += 0.001;
+		camera.position.x += 0.0002;
 		// camera.position.z += -0.0001;
 		waveCount++
 	} else {
 		// console.log('down')
-		bgPlane.position.y += 0.0005;
-		camera.position.y -= 0.0001;
-		camera.position.x -= 0.00002;
+		bgPlane.position.y += 0.00005;
+		camera.position.y -= 0.001;
+		camera.position.x -= 0.0002;
 		// camera.position.z -= -0.0001;
 		waveCount--
 	}
+
+}
+
+	
 
 }
 
@@ -565,7 +578,7 @@ scene.add(backPlane);
 
 	function moveAway(z){
 		const move = backPlane.position.z + (z.toFixed(3) * 1.6) 
-		console.log('moved = '+ move)
+		//console.log('moved = '+ move)
 		backPlane.position.set(-1.5,17,move)
 	}
 
@@ -776,6 +789,8 @@ const count = plane.geometry.attributes.position.count
 
 function wavy(){
 
+	//requestAnimationFrame(wavy)
+
 const now = Date.now() / 1500
     for (let i  = 0; i < count; i++){
         const x = plane.geometry.attributes.position.getX(i);
@@ -811,14 +826,19 @@ const now = Date.now() / 1500
 }
 
 
+let fps = 0
 
 function animate(){
     requestAnimationFrame(animate)
-
+	fps += 1
     // cubeCamera.position.copy(plane.position); //----reflections
     // cubeCamera.update(renderer, scene);
 
     const elapsedTime = clock.getElapsedTime();
+
+// if (elapsedTime.toFixed(2) % 1 === 0){
+// 	console.log(fps+ ' '+ elapsedTime.toFixed(2))
+// }
 
     // Animate the normal map's offset (UV coordinates)
     planeMaterial.normalMap.offset.x = elapsedTime * 0.01;
@@ -834,11 +854,6 @@ function animate(){
 	// 	animIsActive = false
 	// } 
 
-	if (animIsActive){
-		cameraTrack()
-	}
-	
-	
 	
     scene.add( cube );
 
@@ -855,14 +870,22 @@ function animate(){
     // };
 
   
-if (elapsedTime % 2 !== 0){
-    wavy()
-	 cameraWaving()
 
+  if (camWaveOn){
+	cameraWaving()
+	render()
+  }
+
+   // wavy()
+   camWaveOn = !camWaveOn
+	
+
+if (animIsActive){
+	
+	cameraTrack()
+	
 }
 
-render()
-    // renderer.render(scene, camera)
 }
 
 
@@ -871,13 +894,34 @@ render()
 window.addEventListener('scroll', () => {
 	startRot = cube.rotation.y
 	animIsActive = true
+if (currentStep === 'cube'){
+
+if ((Math.ceil(startRot*100)/100) % 1.57 === 0 || startRot === 0){
+		countRot = Math.ceil(cube.rotation.y*100) / 157
+		console.log('should be %1.57 startRot = ' + startRot + ' countRot = '+countRot) 
+	} else {
+
+		if (countRot === 1){
+			startRot = 1.57 
+			countRot = Math.ceil(cube.rotation.y.toFixed(2) / 1.57)
+		} else {
+			startRot = 1.57 * countRot
+			countRot = (Math.ceil(cube.rotation.y * 100) /100) / 1.57
+		}
+		
+		//startRot = 1.57 * countRot
+		console.log('not full rot | countRot = '+countRot+'  = '+Math.ceil(cube.rotation.y*100) / 157)
+	}
+
 	if (lenis.direction > 0){
 		scrollCount += 1
 	} else if (lenis.direction < 0){
 		scrollCount -= 1
 	}
-	
-	console.log('scrollCount = '+ scrollCount)
+
+}
+
+	console.log('Event Trigered | scrollCount = '+ scrollCount + ' startRot = '+ (Math.ceil(startRot*100)/100))
 })
 
 cube.layers.toggle( BLOOM_SCENE )
@@ -901,9 +945,6 @@ cube.layers.toggle( BLOOM_SCENE )
 
 // camera.position.set(0, 4, 13)
  controls.update()
-
-
-
 renderer.setAnimationLoop(animate)
 
 window.addEventListener('resize', function() {
