@@ -1,4 +1,3 @@
-
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
@@ -9,7 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
  import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
  import Lenis from '@studio-freight/lenis'
  import { Water } from 'three/addons/objects/Water.js';
- import { Sky } from 'three/addons/objects/Sky.js';
+ //import { Sky } from 'three/addons/objects/Sky.js';
 // import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // import nebula from '../../public/nabula.jpg'
 // import lake from '../../public/foggy-lake.jpg'
@@ -110,46 +109,51 @@ requestAnimationFrame(raf)
 let startRot = 0
 let countRot = 0
 let animIsActive = false
-let totalSteps = 0
-let currentStep = 'first'
+let totalSteps = 1
+let currentStep = 'start'
 let camWaveOn = true
-const animRate = 2000 
+let animRun = false
+const animRate = 60 
 const firstDist = {x:0.1, y:4, z:13}
 const secDist = {x:0.3, y:4.2, z:10.5}  //  {x:-0.1, y:4.1, z:10.5}
-const thrDist = {x:0.5, y:4.4, z:8}  //  {x:-0.3, y:4.2, z:8} 
+const thrDist = {x:0.5, y:4.4, z:8}    //  {x:-0.3, y:4.2, z:8} 
 
 function cameraTrack(){
 
- //requestAnimationFrame(cameraTrack)
+ requestAnimationFrame(cameraTrack)
 
-	if ((lenis.scroll === 0 && loopCount === -animRate) || (lenis.scroll === 0 && lenis.velocity < -50)){
-		console.log('drive 1 - totalSteps = ' + totalSteps)
-		cameraReset(firstDist)
-		lenis.direction = undefined
-		currentStep = 'first'
-		totalSteps = 0
-		animIsActive = false
-		scrollCount = 0
-	}
 
-	if ((totalSteps === animRate && camera.position.z <= 10.5 && camera.position.z >= 8)  || ((lenis.scroll < 0 && camera.position.z < 10.5 ) && currentStep === 'cube')){
-		console.log('drive 2 - totalSteps = ' + totalSteps)
-		cameraReset(secDist)
-		currentStep = 'second'
-	}
+ //&& loopCount === -animRate
+if (animRun){
+	if ((lenis.scroll === 0) || (lenis.scroll === 0 && lenis.velocity < -50)){
+	console.log('drive 1 - totalSteps = ' + totalSteps + ' camz = '+ camera.position.z)
+	cameraReset(firstDist)
+	lenis.direction = undefined
+	currentStep = 'first'
+	totalSteps = 0
+	scrollCount = 0
+}
 
-	if ((totalSteps === 4000 && currentStep === 'second' ) || (lenis.velocity < -50 && cube.rotation.y > 0)){
-		console.log('drive 3 + cam z = '+  camera.position.z + ' totalSteps = ' + totalSteps)
-		cameraReset(thrDist)
-		currentStep = 'cube'
-		startRot = 0
-		cube.rotation.y = 0
-	}
+if ((totalSteps === animRate && camera.position.z <= 10.5 && camera.position.z >= 8 && currentStep !== 'second')  || ((lenis.scroll < 0 && camera.position.z < 10.5 ) && currentStep === 'cube' )){
+	console.log('drive 2 - totalSteps = ' + totalSteps)
+	cameraReset(secDist)
+	currentStep = 'second'
+}
+
+if ((totalSteps === 4000 && currentStep === 'second' ) || (lenis.velocity < -50 && cube.rotation.y > 0)){
+	console.log('drive 3 + cam z = '+  camera.position.z + ' totalSteps = ' + totalSteps)
+	cameraReset(thrDist)
+	currentStep = 'cube'
+	startRot = 0
+	cube.rotation.y = 0
+}
+}
 
 	firstStop()
 	secondStop()
 	rotateCube()
-	
+	animRun = false
+
 }
 
 
@@ -169,10 +173,13 @@ function firstStop(){
 	
 	if ( loopCount < animRate && loopCount > -animRate && lenis.scroll >= 0 && (currentStep === 'second' || currentStep === 'first')){
 		if (camera.position.z > 10.5 || (camera.position.z === 10.5 && lenis.direction < 0 )){
-			//console.log('first stop - totalSteps = '+ totalSteps)
-			moveCamera()
-
-			if (camera.position.z < 10.51 && lenis.direction > 0){
+			console.log('first stop - totalSteps = '+ totalSteps)
+			// if (animIsActive){
+			// 	moveCamera()
+			// }
+				animIsActive = true
+				animRun = true
+			if (camera.position.z < 10.5 && lenis.direction > 0){
 				cameraReset(secDist)
 				currentStep = 'second'
 			}
@@ -183,10 +190,14 @@ function firstStop(){
 
 function secondStop(){
 
-	if ( camera.position.z <= 10.5 && loopCount <= animRate && loopCount >= -animRate && (currentStep === 'second' || currentStep === 'cube')){
+	if ( camera.position.z === 10.5 && loopCount <= animRate && loopCount >= -animRate && (currentStep === 'second' || currentStep === 'cube')){
 		if ((cube.rotation.y === 0 && camera.position.z >= 8 && lenis.direction < 0) || (lenis.direction > 0 && camera.position.z > 8)){
-				//console.log('2 stop - totalSteps = '+ totalSteps)
-				moveCamera()
+				console.log('2 stop - totalSteps = '+ totalSteps)
+				// if (animIsActive){
+				// 	moveCamera()
+				// }
+				animIsActive = true
+				animRun = true
 	}	
   }
 }
@@ -195,6 +206,7 @@ function secondStop(){
 function rotateCube(){
 	const fullRot = THREE.MathUtils.degToRad(360)
 	const oneRot = THREE.MathUtils.degToRad(90)
+	animRun = true
 if ( camera.position.z === 8 && currentStep === 'cube' && animIsActive){
 	console.log('cube rotation')
 		if (lenis.direction < 0 || cube.rotation.y >= fullRot ){
@@ -215,82 +227,83 @@ if ( camera.position.z === 8 && currentStep === 'cube' && animIsActive){
 // document.body.onscroll = moveCamera
 // window.addEventListener('scroll', moveCamera);
 
-function moveCamera(){
+//function moveCamera(){
 	//requestAnimationFrame(moveCamera)
-const moveDist = 2.5/animRate 
+
         // const x = camera.position.x;
         // const y =  camera.position.y;
         // const xsin = (Math.sin(x + now) / 8 )
         // const ycos = (Math.cos(y + now) / 16)
 
 	// const t = document.body.getBoundingClientRect().top;
-	if (lenis.direction > 0 && camera.position.z > 8) {
-		loopCount += 1
-//  for (let i = 0; i > 100; i++ )
-			// console.log("+")
-			camera.position.y += 0.00015 ;
-			camera.position.x += 0.0003 ;
-			camera.position.z -= moveDist;
-			camera.lookAt(0,2,0)
-			totalSteps += 1
-			moveAway(-moveDist)
-	}
+// 	const moveDist = 2.5/animRate 
+// 	if (lenis.direction > 0 && camera.position.z > 8) {
+// 		loopCount += 1
+// //  for (let i = 0; i > 100; i++ )
+// 			// console.log("+")
+// 			camera.position.y += 0.00015 ;
+// 			camera.position.x += 0.0003 ;
+// 			camera.position.z -= moveDist;
+// 			camera.lookAt(0,2,0)
+// 			totalSteps += 1
+// 			moveAway(-moveDist)
+// 	}
 		
-if (lenis.direction < 0 && camera.position.z < 13)  {
-	loopCount -= 1
-	// console.log('-')
-	// for (let i = 0; i > 100; i++ )
-		camera.position.y -= 0.00015 ;
-		camera.position.x -= 0.0003 ;
-		camera.position.z += moveDist;
-		camera.lookAt(0,2,0)
-		totalSteps -= 1
-		moveAway(moveDist)
-	}
+// if (lenis.direction < 0 && camera.position.z < 13)  {
+// 	loopCount -= 1
+// 	// console.log('-')
+// 	// for (let i = 0; i > 100; i++ )
+// 		camera.position.y -= 0.00015 ;
+// 		camera.position.x -= 0.0003 ;
+// 		camera.position.z += moveDist;
+// 		camera.lookAt(0,2,0)
+// 		totalSteps -= 1
+// 		moveAway(moveDist)
+// 	}
 
 
-}
+//}
 			
 
 //CAMERA WAVING----------------------------------------------------------
 let waveDirection = true
-function cameraWaving(){
+// function cameraWaving(){
 
-	camera.lookAt(0,2,0)
+// 	camera.lookAt(0,2,0)
 	
-if (camWaveOn){
+// if (camWaveOn){
 
-	if (waveCount === 300){
-		if (waveDirection){
-			waveCount = 600
-			waveDirection = !waveDirection
-		} else {
-			waveCount = 0
-			waveDirection = !waveDirection
-		}
-	}
+// 	if (waveCount === 300){
+// 		if (waveDirection){
+// 			waveCount = 600
+// 			waveDirection = !waveDirection
+// 		} else {
+// 			waveCount = 0
+// 			waveDirection = !waveDirection
+// 		}
+// 	}
 
-	if (waveCount < 300){
-		// console.log('up')
-		bgPlane.position.y -= 0.00005;
-		camera.position.y += 0.001;
-		camera.position.x += 0.0002;
-		// camera.position.z += -0.0001;
-		waveCount++
-	} else {
-		// console.log('down')
-		bgPlane.position.y += 0.00005;
-		camera.position.y -= 0.001;
-		camera.position.x -= 0.0002;
-		// camera.position.z -= -0.0001;
-		waveCount--
-	}
+// 	if (waveCount < 300){
+// 		// console.log('up')
+// 		bgPlane.position.y -= 0.00005;
+// 		camera.position.y += 0.001;
+// 		camera.position.x += 0.0002;
+// 		// camera.position.z += -0.0001;
+// 		waveCount++
+// 	} else {
+// 		// console.log('down')
+// 		bgPlane.position.y += 0.00005;
+// 		camera.position.y -= 0.001;
+// 		camera.position.x -= 0.0002;
+// 		// camera.position.z -= -0.0001;
+// 		waveCount--
+// 	}
 
-}
+// }
 
 	
 
-}
+// }
 
 	
 	// camera.position.y = 3.5;
@@ -830,6 +843,83 @@ let fps = 0
 
 function animate(){
     requestAnimationFrame(animate)
+
+	camera.lookAt(0,2,0)
+	
+	if (camWaveOn){
+	
+		if (waveCount === 300){
+			if (waveDirection){
+				waveCount = 600
+				waveDirection = !waveDirection
+			} else {
+				waveCount = 0
+				waveDirection = !waveDirection
+			}
+		}
+	
+		if (waveCount < 300){
+			// console.log('up')
+			bgPlane.position.y -= 0.00005;
+			camera.position.y += 0.001;
+			camera.position.x += 0.0002;
+			// camera.position.z += -0.0001;
+			waveCount++
+		} else {
+			// console.log('down')
+			bgPlane.position.y += 0.00005;
+			camera.position.y -= 0.001;
+			camera.position.x -= 0.0002;
+			// camera.position.z -= -0.0001;
+			waveCount--
+		}
+	
+	}
+
+	
+
+if (animIsActive){
+	
+	const moveDist = 2.5/animRate 
+	if (lenis.direction > 0 && camera.position.z > 8) {
+		loopCount += 1
+//  for (let i = 0; i > 100; i++ )
+			// console.log("+")
+			camera.position.y += 0.00015 ;
+			camera.position.x += 0.0003 ;
+			camera.position.z -= moveDist;
+			camera.lookAt(0,2,0)
+			totalSteps += 1
+			moveAway(-moveDist)
+	}
+		
+if (lenis.direction < 0 && camera.position.z < 13)  {
+	loopCount -= 1
+	// console.log('-')
+	// for (let i = 0; i > 100; i++ )
+		camera.position.y -= 0.00015 ;
+		camera.position.x -= 0.0003 ;
+		camera.position.z += moveDist;
+		camera.lookAt(0,2,0)
+		totalSteps -= 1
+		moveAway(moveDist)
+	}
+}
+
+if (animIsActive){
+
+	cameraTrack()
+	
+	animIsActive = false
+
+}
+
+if (totalSteps % animRate === 0 && totalSteps > 1){
+	cameraTrack()
+	animIsActive = false
+	console.log('is 600')
+}
+
 	fps += 1
     // cubeCamera.position.copy(plane.position); //----reflections
     // cubeCamera.update(renderer, scene);
@@ -869,23 +959,19 @@ function animate(){
     //     }
     // };
 
-  
+ 
+ 
 
-  if (camWaveOn){
-	cameraWaving()
-	render()
-  }
+//   if (camWaveOn){
+// 	cameraWaving()
+//   }
 
    // wavy()
    camWaveOn = !camWaveOn
 	
 
-if (animIsActive){
-	
-	cameraTrack()
-	
-}
 
+render()
 }
 
 
@@ -894,6 +980,8 @@ if (animIsActive){
 window.addEventListener('scroll', () => {
 	startRot = cube.rotation.y
 	animIsActive = true
+	animRun = false
+
 if (currentStep === 'cube'){
 
 if ((Math.ceil(startRot*100)/100) % 1.57 === 0 || startRot === 0){
@@ -945,7 +1033,10 @@ cube.layers.toggle( BLOOM_SCENE )
 
 // camera.position.set(0, 4, 13)
  controls.update()
+
 renderer.setAnimationLoop(animate)
+
+
 
 window.addEventListener('resize', function() {
     camera.aspect =  canv.clientWidth /  canv.clientHeight;
